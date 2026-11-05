@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Лимит тяжек</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0F1613">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Лимит">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: одна колонка, большие счётчики сверху, нижняя панель вкладок. Тяжки тёплые, упражнения холодные. */
+:root{
+  --bg:#EEF1EE; --surface:#FFFFFF; --ink:#16201C; --muted:#5B6862; --line:#D8DED9;
+  --puff:#B4540F; --on-puff:#FFFFFF;
+  --move:#0B6F78; --on-move:#FFFFFF;
+  --bad:#B3261E; --good:#2B7A4B;
+  --display:'Barlow Condensed','Onest',system-ui,sans-serif;
+  --body:'Onest',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1613; --surface:#18221D; --ink:#E7EEE9; --muted:#97A59D; --line:#2A3730;
+    --puff:#F09A5A; --on-puff:#1A0F05;
+    --move:#5CC6CF; --on-move:#04191B;
+    --bad:#FF8A80; --good:#7BD39A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1613; --surface:#18221D; --ink:#E7EEE9; --muted:#97A59D; --line:#2A3730;
+  --puff:#F09A5A; --on-puff:#1A0F05;
+  --move:#5CC6CF; --on-move:#04191B;
+  --bad:#FF8A80; --good:#7BD39A;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--body);-webkit-text-size-adjust:100%}
+.wrap{max-width:480px;margin:0 auto;padding:16px 16px 104px;display:flex;flex-direction:column;gap:12px}
+h1,h2,h3,p{margin:0}
+h2{font-size:22px;font-weight:700;text-wrap:balance}
+.muted{color:var(--muted)}
+.head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:4px 2px}
+.head .day{font-size:15px;color:var(--muted);font-weight:600}
+.head .day b{font-family:var(--display);font-size:44px;line-height:1;color:var(--ink);font-weight:700;margin-left:4px;font-variant-numeric:tabular-nums}
+.head .date{font-size:14px;color:var(--muted);text-align:right}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.big{display:flex;align-items:baseline;gap:10px;font-variant-numeric:tabular-nums}
+.num{font-family:var(--display);font-weight:700;font-size:76px;line-height:.9}
+.of{font-family:var(--display);font-weight:600;font-size:30px;color:var(--muted)}
+.puff .num{color:var(--puff)}
+.move .num{color:var(--move)}
+.over .num{color:var(--bad)}
+.bar{height:10px;border-radius:99px;background:color-mix(in srgb,var(--ink) 9%,var(--surface));overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--puff);transition:width .25s ease}
+.move .bar i{background:var(--move)}
+.over .bar i{background:var(--bad)}
+.status{font-weight:600;font-size:17px}
+.status.bad{color:var(--bad)}
+.btns{display:flex;gap:8px}
+button{font:inherit;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:600;padding:0 14px;cursor:pointer;touch-action:manipulation}
+button:active{transform:scale(.98)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid color-mix(in srgb,var(--move) 70%,transparent);outline-offset:2px}
+button:disabled{opacity:.45;cursor:default}
+.btns button{flex:1}
+.btns .main{flex:3;min-height:64px;font-size:19px;border:0}
+.puff .main{background:var(--puff);color:var(--on-puff)}
+.move .main{background:var(--move);color:var(--on-move)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.stat span{font-size:12px;color:var(--muted)}
+.stat b{font-family:var(--display);font-size:28px;line-height:1.05;font-variant-numeric:tabular-nums}
+.stat.warn b{color:var(--bad)}
+.note{font-size:14px;color:var(--muted)}
+svg.chart{width:100%;height:auto;display:block}
+.chart .gl{stroke:var(--line);stroke-width:1}
+.chart .tx{fill:var(--muted);font-size:10px;font-family:var(--body)}
+.chart .lim{stroke:var(--ink);stroke-width:1.5;fill:none;stroke-dasharray:4 3}
+.chart .dot{fill:var(--ink)}
+.chart .ok{fill:var(--puff)}
+.chart .no{fill:var(--bad)}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--puff);margin-right:6px}
+.legend i.l{background:none;border-top:2px dashed var(--ink);height:0;border-radius:0;width:16px;vertical-align:middle}
+.rows{display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:1fr auto;gap:2px 12px;text-align:left;min-height:64px;padding:10px 14px;align-items:center;width:100%}
+.row .t{font-weight:600}
+.row .s{font-size:13px;color:var(--muted);font-weight:400}
+.row .r{text-align:right;font-variant-numeric:tabular-nums}
+.chips{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.chip{font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:color-mix(in srgb,var(--ink) 8%,var(--surface));color:var(--muted)}
+.chip.good{background:color-mix(in srgb,var(--good) 18%,var(--surface));color:var(--good)}
+.chip.bad{background:color-mix(in srgb,var(--bad) 16%,var(--surface));color:var(--bad)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:14px;font-weight:600}
+input,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-height:46px}
+textarea{min-height:120px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.danger{color:var(--bad)}
+.danger.arm{background:var(--bad);color:var(--surface);border-color:var(--bad)}
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+.tabs div{display:flex;gap:6px;width:100%;max-width:480px}
+.tabs button{flex:1;border:0;background:none;color:var(--muted)}
+.tabs button[aria-current="page"]{background:color-mix(in srgb,var(--ink) 8%,var(--surface));color:var(--ink)}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:5}
+.sheet{width:100%;max-width:480px;background:var(--surface);border-radius:20px 20px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
+@media (prefers-reduced-motion: reduce){ .bar i{transition:none} button:active{transform:none} }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<nav class="tabs" aria-label="Разделы"><div>
+  <button data-act="tab" data-tab="today" id="tab-today">Сегодня</button>
+  <button data-act="tab" data-tab="history" id="tab-history">История</button>
+  <button data-act="tab" data-tab="settings" id="tab-settings">Настройки</button>
+</div></nav>
+<div id="dlg"></div>
+
+<script>
+(function(){
+'use strict';
+var LS='vape-limit-v1';
+function DEF(){return {startDate:null,startLimit:100,step:2,rollHour:4,
+  exercises:['Подтягивания','Отжимания','Приседания','Пресс','Бёрпи'],
+  puffs:{},done:{},updated:0};}
+
+var S=load(), tab='today', editKey=null, note='', armed=false, sync='local', dbDoc=null, wt=null;
+
+function load(){
+  try{var r=localStorage.getItem(LS); if(r){return Object.assign(DEF(),JSON.parse(r));}}catch(e){}
+  return DEF();
+}
+function pad(n){return String(n).padStart(2,'0');}
+function todayKey(){
+  var d=new Date(Date.now()-S.rollHour*3600000);
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+function utc(k){var p=k.split('-').map(Number);return Date.UTC(p[0],p[1]-1,p[2]);}
+function addDays(k,n){var t=new Date(utc(k)+n*86400000);return t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1)+'-'+pad(t.getUTCDate());}
+function dayNum(k){return Math.round((utc(k)-utc(S.startDate))/86400000)+1;}
+function limitFor(n){return Math.max(0,S.startLimit-S.step*(n-1));}
+function exFor(n){var l=S.exercises;return l.length?l[(((n-1)%l.length)+l.length)%l.length]:'Упражнение';}
+function pOf(k){return S.puffs[k]||0;}
+function dOf(k){return S.done[k]||0;}
+function fmt(k){return new Date(utc(k)).toLocaleDateString('ru-RU',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function fix(){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(S.startDate||''))S.startDate=todayKey();
+  if(!Array.isArray(S.exercises)||!S.exercises.length)S.exercises=DEF().exercises;
+  ['startLimit','step','rollHour'].forEach(function(f){S[f]=Number(S[f]);if(!isFinite(S[f]))S[f]=DEF()[f];});
+  if(!S.puffs||typeof S.puffs!=='object')S.puffs={};
+  if(!S.done||typeof S.done!=='object')S.done={};
+}
+fix();
+
+function save(){
+  S.updated=Date.now();
+  try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}
+  if(dbDoc){clearTimeout(wt);wt=setTimeout(pushDb,800);}
+}
+function pushDb(){
+  if(!dbDoc)return Promise.resolve();
+  return Promise.resolve(dbDoc.set({json:JSON.stringify(S),updated:S.updated}))
+    .then(function(){sync='ok';}).catch(function(){sync='err';});
+}
+function initDb(){
+  if(!(window.claude&&window.claude.use))return;
+  Promise.all([claude.use('db'),claude.use('user')]).then(function(r){
+    var db=r[0],user=r[1]; if(!db||!user)return;
+    return Promise.resolve(user.id()).then(function(id){
+      if(!id)return;
+      dbDoc=db.collection('data/users/'+id).doc('state');
+      return Promise.resolve(dbDoc.get()).then(function(snap){
+        var ex=snap&&(typeof snap.exists==='function'?snap.exists():snap.exists);
+        var data=ex?(typeof snap.data==='function'?snap.data():snap.data):null;
+        if(!data&&snap&&snap.json)data=snap;
+        if(data&&data.json&&(data.updated||0)>S.updated){
+          S=Object.assign(DEF(),JSON.parse(data.json));fix();
+          try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}
+          sync='ok';render();
+        }else if(S.updated>0&&(!data||S.updated>(data.updated||0))){
+          return pushDb().then(render);
+        }else{sync='ok';render();}
+      });
+    });
+  }).catch(function(){});
+}
+
+function add(o,k,n){o[k]=Math.max(0,(o[k]||0)+n);}
+
+function pct(v,max){if(max<=0)return v>0?100:0;return Math.max(0,Math.min(100,v/max*100));}
+
+function debt(n){var s=0;for(var i=1;i<n;i++){var k=addDays(S.startDate,i-1);s+=Math.max(0,pOf(k)-dOf(k));}return s;}
+function streak(n){var c=0;for(var i=n-1;i>=1;i--){var k=addDays(S.startDate,i-1);if(pOf(k)<=limitFor(i))c++;else break;}return c;}
+
+function viewToday(){
+  var key=todayKey(), n=dayNum(key);
+  if(n<1){
+    return '<section class="card"><h2>Старт '+esc(fmt(S.startDate))+'</h2><p class="muted">До начала ещё '+(1-n)+' дн. Дату старта можно поменять в настройках.</p></section>';
+  }
+  var lim=limitFor(n), p=pOf(key), d=dOf(key), left=lim-p, over=p>lim, rem=p-d, dbt=debt(n), st=streak(n);
+  var puffStatus= over?'<div class="status bad">Выше лимита на '+(-left)+'</div>'
+    : left===0?'<div class="status">Лимит выбран полностью</div>'
+    : '<div class="status">Осталось '+left+'</div>';
+  var exStatus= rem>0?'Осталось '+rem
+    : rem===0?(p===0?'Пока нечего делать':'Всё сделано')
+    : 'Сверх нормы +'+(-rem);
+  var h='';
+  h+='<div class="head"><div class="day">День<b>'+n+'</b></div><div class="date">'+esc(fmt(key))+'<br>завтра лимит '+limitFor(n+1)+'</div></div>';
+  h+='<section class="card puff'+(over?' over':'')+'"><div class="label">Тяжки сегодня</div>'+
+     '<div class="big"><span class="num">'+p+'</span><span class="of">из '+lim+'</span></div>'+
+     '<div class="bar"><i style="width:'+pct(p,lim)+'%"></i></div>'+puffStatus+
+     '<div class="btns"><button class="main" data-act="puff" data-n="1">+1 тяжка</button><button data-act="puff" data-n="5">+5</button><button data-act="puff" data-n="-1" aria-label="Убрать одну тяжку">−1</button></div></section>';
+  h+='<section class="card move"><div class="label">Упражнение дня</div><h2>'+esc(exFor(n))+'</h2>'+
+     '<div class="big"><span class="num">'+d+'</span><span class="of">из '+p+'</span></div>'+
+     '<div class="bar"><i style="width:'+pct(d,p)+'%"></i></div>'+
+     '<div class="status">'+exStatus+'</div>'+
+     '<div class="btns"><button class="main" data-act="done" data-n="1">+1 сделал</button><button data-act="done" data-n="5">+5</button><button data-act="done" data-n="10">+10</button><button data-act="done" data-n="-1" aria-label="Убрать одно повторение">−1</button></div>'+
+     '<button data-act="doneall"'+(rem<=0?' disabled':'')+'>Закрыть все '+Math.max(0,rem)+' повторений</button>'+
+     (dbt>0?'<p class="note">Долг за прошлые дни: '+dbt+'. Закрыть его можно в истории.</p>':'')+
+     '</section>';
+  h+='<div class="stats"><div class="stat"><span>Серия в лимите</span><b>'+st+' дн.</b></div>'+
+     '<div class="stat"><span>Лимит сегодня</span><b>'+lim+'</b></div>'+
+     '<div class="stat'+(dbt>0?' warn':'')+'"><span>Долг упражнений</span><b>'+dbt+'</b></div></div>';
+  return h;
+}
+
+function chart(n){
+  var from=Math.max(1,n-13), pts=[], i;
+  for(i=from;i<=n;i++){pts.push({n:i,p:pOf(addDays(S.startDate,i-1)),l:limitFor(i)});}
+  var W=340,H=150,L=30,R=8,T=14,B=22, pw=W-L-R, ph=H-T-B;
+  var mx=Math.max(10,Math.ceil(Math.max.apply(null,pts.map(function(q){return Math.max(q.p,q.l);}))/10)*10);
+  function y(v){return T+ph-(v/mx)*ph;}
+  var slot=pw/pts.length, bw=slot*0.6, s='';
+  s+='<line class="gl" x1="'+L+'" x2="'+(W-R)+'" y1="'+y(0)+'" y2="'+y(0)+'"/><line class="gl" x1="'+L+'" x2="'+(W-R)+'" y1="'+y(mx)+'" y2="'+y(mx)+'"/>';
+  s+='<text class="tx" x="'+(L-5)+'" y="'+(y(mx)+3)+'" text-anchor="end">'+mx+'</text><text class="tx" x="'+(L-5)+'" y="'+(y(0)+3)+'" text-anchor="end">0</text>';
+  var line=[];
+  pts.forEach(function(q,j){
+    var cx=L+slot*(j+0.5), h=Math.max(0,(q.p/mx)*ph);
+    s+='<rect class="'+(q.p>q.l?'no':'ok')+'" x="'+(cx-bw/2).toFixed(1)+'" y="'+(y(0)-h).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="2"/>';
+    line.push(cx.toFixed(1)+','+y(q.l).toFixed(1));
+  });
+  s+='<polyline class="lim" points="'+line.join(' ')+'"/>';
+  var last=pts[pts.length-1], lx=L+slot*(pts.length-0.5);
+  s+='<circle class="dot" cx="'+lx.toFixed(1)+'" cy="'+y(last.l).toFixed(1)+'" r="3.5"/>';
+  s+='<text class="tx" x="'+(W-R)+'" y="'+(y(last.l)-7).toFixed(1)+'" text-anchor="end">лимит '+last.l+'</text>';
+  s+='<text class="tx" x="'+(L+slot*0.5).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle">'+pts[0].n+'</text>';
+  if(pts.length>1)s+='<text class="tx" x="'+lx.toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle">'+last.n+'</text>';
+  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Тяжки по дням и лимит">'+s+'</svg>';
+}
+
+function viewHistory(){
+  var n=dayNum(todayKey());
+  if(n<1)return '<section class="card"><h2>История пуста</h2><p class="muted">Старт ещё не наступил.</p></section>';
+  var h='<section class="card"><div class="label">Последние 14 дней, номер дня внизу</div>'+chart(n)+
+    '<div class="legend"><span><i></i>тяжки</span><span><i class="l"></i>лимит</span></div></section><div class="rows">';
+  for(var i=n;i>=1;i--){
+    var k=addDays(S.startDate,i-1), p=pOf(k), d=dOf(k), l=limitFor(i), rem=p-d;
+    var c1=p>l?'<span class="chip bad">выше на '+(p-l)+'</span>':'<span class="chip good">в лимите</span>';
+    var c2=rem>0?'<span class="chip bad">долг '+rem+'</span>':(p>0?'<span class="chip good">сделано</span>':'');
+    h+='<button class="row" data-act="edit" data-k="'+k+'"><span class="t">День '+i+' · '+esc(fmt(k))+'<br><span class="s">'+esc(exFor(i))+' '+d+' из '+p+'</span></span>'+
+       '<span class="r"><b>'+p+'</b> / '+l+'<div class="chips">'+c1+c2+'</div></span></button>';
+  }
+  return h+'</div>';
+}
+
+function viewSettings(){
+  var st= sync==='ok'?'Данные сохраняются в твоём аккаунте и на этом устройстве.':sync==='err'?'Не удалось сохранить в аккаунт, данные пока только на этом устройстве.':'Данные хранятся на этом устройстве.';
+  var h='<section class="card"><h2>Правила</h2>'+
+   '<div class="two"><div class="field"><label for="s-limit">Лимит в первый день</label><input id="s-limit" type="number" inputmode="numeric" min="1" max="1000" value="'+S.startLimit+'" data-set="startLimit"></div>'+
+   '<div class="field"><label for="s-step">Минус в день</label><input id="s-step" type="number" inputmode="numeric" min="0" max="50" value="'+S.step+'" data-set="step"></div></div>'+
+   '<div class="two"><div class="field"><label for="s-date">Дата первого дня</label><input id="s-date" type="date" value="'+S.startDate+'" data-set="startDate"></div>'+
+   '<div class="field"><label for="s-roll">Новый день с (час)</label><input id="s-roll" type="number" inputmode="numeric" min="0" max="12" value="'+S.rollHour+'" data-set="rollHour"></div></div>'+
+   '<p class="note">До этого часа ночи тяжки пишутся на вчерашний день.</p></section>';
+  h+='<section class="card"><h2>Упражнения</h2><div class="field"><label for="s-ex">По одному на строку, меняются по кругу: 1-й день — первая строка</label>'+
+   '<textarea id="s-ex" data-set="exercises">'+esc(S.exercises.join('\n'))+'</textarea></div></section>';
+  h+='<section class="card"><h2>Данные</h2><p class="note">'+st+'</p>'+
+   '<button data-act="copy">Скопировать резервную копию</button>'+
+   '<div class="field"><label for="imp">Вставить резервную копию</label><textarea id="imp" placeholder="Вставь сюда скопированный текст"></textarea></div>'+
+   '<button data-act="import">Загрузить из копии</button>'+
+   (note?'<p class="note" role="status">'+esc(note)+'</p>':'')+
+   '<button class="danger'+(armed?' arm':'')+'" data-act="restart">'+(armed?'Точно? Вся история удалится':'Начать заново с сегодняшнего дня')+'</button></section>';
+  return h;
+}
+
+function dialog(){
+  if(!editKey)return '';
+  var k=editKey, n=dayNum(k);
+  return '<div class="scrim"><div class="sheet" role="dialog" aria-label="Правка дня"><h2>День '+n+' · '+esc(fmt(k))+'</h2>'+
+   '<div class="field"><label for="ed-p">Тяжек сделано</label><input id="ed-p" type="number" inputmode="numeric" min="0" value="'+pOf(k)+'"></div>'+
+   '<div class="field"><label for="ed-d">'+esc(exFor(n))+', сделано</label><input id="ed-d" type="number" inputmode="numeric" min="0" value="'+dOf(k)+'"></div>'+
+   '<div class="btns"><button data-act="edcancel">Отмена</button><button class="main" style="background:var(--move);color:var(--on-move)" data-act="edsave">Сохранить</button></div></div></div>';
+}
+
+function render(){
+  var app=document.getElementById('app');
+  app.innerHTML= tab==='today'?viewToday():tab==='history'?viewHistory():viewSettings();
+  ['today','history','settings'].forEach(function(t){
+    var b=document.getElementById('tab-'+t);
+    if(t===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+  });
+  document.getElementById('dlg').innerHTML=dialog();
+}
+
+function intIn(id){var v=parseInt(document.getElementById(id).value,10);return isFinite(v)&&v>=0?v:0;}
+
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-act]'); if(!b||b.disabled)return;
+  var a=b.dataset.act, n=parseInt(b.dataset.n,10)||0, key=todayKey();
+  if(a!=='restart'&&armed){armed=false;}
+  if(a==='tab'){tab=b.dataset.tab;note='';armed=false;render();window.scrollTo(0,0);}
+  else if(a==='puff'){add(S.puffs,key,n);save();render();}
+  else if(a==='done'){add(S.done,key,n);save();render();}
+  else if(a==='doneall'){S.done[key]=pOf(key);save();render();}
+  else if(a==='edit'){editKey=b.dataset.k;render();var el=document.getElementById('ed-p');if(el)el.focus();}
+  else if(a==='edcancel'){editKey=null;render();}
+  else if(a==='edsave'){S.puffs[editKey]=intIn('ed-p');S.done[editKey]=intIn('ed-d');editKey=null;save();render();}
+  else if(a==='restart'){
+    if(!armed){armed=true;render();}
+    else{armed=false;S.startDate=todayKey();S.puffs={};S.done={};save();tab='today';note='';render();}
+  }
+  else if(a==='copy'){
+    var txt=JSON.stringify(S);
+    try{navigator.clipboard.writeText(txt).then(function(){note='Копия в буфере обмена.';render();},function(){note='Не получилось скопировать. Выдели текст вручную в поле ниже.';document.getElementById('imp').value=txt;render();});}
+    catch(err){note='Не получилось скопировать.';render();}
+  }
+  else if(a==='import'){
+    try{
+      var o=JSON.parse(document.getElementById('imp').value);
+      if(!o||typeof o!=='object'||!o.puffs)throw new Error('bad');
+      S=Object.assign(DEF(),o);fix();save();note='Загружено.';render();
+    }catch(err){note='Текст не похож на резервную копию. Вставь его целиком.';render();}
+  }
+});
+
+document.addEventListener('change',function(e){
+  var t=e.target, f=t&&t.dataset&&t.dataset.set; if(!f)return;
+  if(f==='startLimit'){S.startLimit=Math.min(1000,Math.max(1,parseInt(t.value,10)||DEF().startLimit));}
+  else if(f==='step'){var v=parseInt(t.value,10);S.step=isFinite(v)?Math.min(50,Math.max(0,v)):DEF().step;}
+  else if(f==='rollHour'){var r=parseInt(t.value,10);S.rollHour=isFinite(r)?Math.min(12,Math.max(0,r)):DEF().rollHour;}
+  else if(f==='startDate'){if(/^\d{4}-\d{2}-\d{2}$/.test(t.value))S.startDate=t.value;}
+  else if(f==='exercises'){var l=t.value.split('\n').map(function(x){return x.trim();}).filter(Boolean);if(l.length)S.exercises=l;}
+  save();render();
+});
+
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&!editKey&&tab!=='settings')render();});
+
+render();
+initDb();
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
+})();
+</script>
+</body>
+</html>
